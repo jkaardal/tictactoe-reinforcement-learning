@@ -23,7 +23,7 @@ W_final = theano.shared(W_final.astype(float_dtype), name='W_final')
 # build policy network
 Z = tictactoe.build_ffnn(X_in, W_in, H, W_out)
 X_final = T.concatenate([Z, X_in], axis=0)
-Z_final = tictactoe.sigmoid(W_final, X_final)
+Z_final = tictactoe.softmax(W_final, X_final)
 
 # compile policy network
 policy = theano.function(inputs=[X_in], outputs=Z_final, on_unused_input='ignore')

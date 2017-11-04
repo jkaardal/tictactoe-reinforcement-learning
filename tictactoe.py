@@ -182,6 +182,18 @@ def relu(W, X):
     return T.switch(L>0.0, L, 0.0)
 
 
+def relu_leaky(W, X):
+    # leaky rectified-linear unit activation function
+    L = T.tile(W[:,0].reshape((W.shape[0], 1)), (1, X.shape[1])) + T.dot(W[:,1:], X)
+    return T.switch(L>0.0, L, 0.01*L)
+
+
+def softmax(W, X):
+    # soft-max layer activation function
+    boltz = T.exp(T.tile(W[:,0].reshape((W.shape[0], 1)), (1, X.shape[1])) + T.dot(W[:,1:], X))
+    return boltz/T.tile(T.sum(boltz, axis=0).reshape((1, X.shape[1])), (boltz.shape[0], 1))
+
+
 def init_dev():
     # initialize 'device' variables (not used)
     X = T.matrix('X')
@@ -397,14 +409,14 @@ def update_batches(batch_X_in, batch_X_out, batch_rewards, X_in, X_out, rewards)
 def main():
 
     # total number of games to play
-    num_games = 2E6
+    num_games = 2E6 #4E6
     
     # data type/machine precision
     float_dtype = np.float64
     eps = np.finfo(float_dtype).eps
     
     # set learning rate
-    alpha = theano.shared(float_dtype(0.001), name='alpha')
+    alpha = theano.shared(float_dtype(0.0001), name='alpha')
     #schedule_alpha = lambda x, ngames, periods: 0.01*np.cos(np.pi/num_games*((ngames*periods) % (2*num_games))) ** 2
     schedule_alpha = lambda x, ngames, periods: 0.001/(1+10.0*(ngames-1)/num_games)
     periods = 1
@@ -428,7 +440,7 @@ def main():
     gamma = 0.95
 
     # file I/O
-    resume = True                        # if True, weights are initialized from file
+    resume = False                       # if True, weights are initialized from file
     save_results = True                  # if True, weights and stats are saved to file
     weight_file_input = "./weights.npz"  # weights input file
     weight_file_output = "./weights.npz" # weights output file
@@ -449,19 +461,23 @@ def main():
             bypass = True
     else:
         # initilize weights to normally distributed random numbers
-        hid_units = 200
+        hid_units = 500
         hid_layers = 1
         N = 10*hid_units + (hid_units+1)*hid_units*hid_layers + (hid_units+1)*hid_units + 9*hid_units + 9*10
-        W_in = np.random.randn(hid_units, 10)*np.sqrt(1.0/10)
-        H = np.random.randn(hid_units, hid_units+1, hid_layers)*np.sqrt(1.0/(hid_units+1))
-        W_out = np.random.randn(hid_units, hid_units+1)*np.sqrt(1.0/(hid_units+1))
+        W_in = np.random.randn(hid_units, 10)*np.sqrt(2.0/10)
+        W_in[:,0] = np.abs(W_in[:,0])
+        H = np.random.randn(hid_units, hid_units+1, hid_layers)*np.sqrt(2.0/(hid_units+1))
+        H[:,0,:] = np.abs(H[:,0,:])
+        W_out = np.random.randn(hid_units, hid_units+1)*np.sqrt(2.0/(hid_units+1))
+        W_out[:,0] = np.abs(W_out[:,0])
         if bypass:
             # include residual bypass
-            W_final = np.random.randn(9, hid_units+10)*np.sqrt(1.0/(hid_units+1))
+            W_final = np.random.randn(9, hid_units+10)*np.sqrt(2.0/(hid_units+1))
         else:
             # no residual bypass
-            W_final = np.random.randn(9, hid_units+1)*np.sqrt(1.0/(hid_units+1))
-    
+            W_final = np.random.randn(9, hid_units+1)*np.sqrt(2.0/(hid_units+1))
+        W_final[:,0] = np.abs(W_final[:,0])
+
     # declare theano 'device' variables
     X_in = T.matrix('X_in')                                              # training data argument
     X_out = T.matrix('X_out')                                            # action data argument
@@ -474,7 +490,7 @@ def main():
     # Build the feed-forward neural network with rectified-linear units activation function. Note that
     # relu is used instead of sigmoid activation functions because they are less susceptible to the
     # vanishing/exploding gradient problems.
-    Z = build_ffnn(X_in, W_in, H, W_out, activation=relu)
+    Z = build_ffnn(X_in, W_in, H, W_out, activation=relu_leaky)
 
     # build final hidden layer
     if bypass:
@@ -485,7 +501,7 @@ def main():
         X_final = Z
 
     # output layer activations
-    Z_final = sigmoid(W_final, X_final) # uses a sigmoid in this case such that p(action) \in (0.0, 1.0)
+    Z_final = softmax(W_final, X_final) # softmax works better than a sigmoid output for predicting actions
         
     # likelihood ratio objective function
     f = -T.sum( (((X_out*T.log(Z_final+eps))) * T.tile(reward_weight.reshape((1, reward_weight.size)), (9, 1))).ravel() ) / batchsize
@@ -617,7 +633,7 @@ def main():
         epsilon = schedule_epsilon(epsilon, rate)
 
         # plot recent win ratio
-        if ngames == plot_interval:
+        '''if ngames == plot_interval:
             h1, = plt.plot(ngames, np.nanmean(track_wins), 'r')
             plt.draw()
         else:
@@ -628,7 +644,7 @@ def main():
                ax.relim()
                ax.autoscale_view()
                plt.draw()
-               plt.pause(0.1)
+               plt.pause(0.1)'''
 
         alpha.set_value(schedule_alpha(alpha.get_value(), ngames, periods))
 
@@ -637,7 +653,7 @@ def main():
         np.savez(weight_file_output, W_in=W_in.get_value(), H=H.get_value(), W_out=W_out.get_value(), W_final=W_final.get_value())
         np.savez(stat_file, nwins=nwins, ndraws=ndraws, ngames=ngames)
         
-        plt.savefig(plot_file)
+        #plt.savefig(plot_file)
 
 if __name__ == "__main__":
     main()
