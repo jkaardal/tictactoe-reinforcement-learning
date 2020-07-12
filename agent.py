@@ -1,6 +1,5 @@
 import numpy as np
 import tensorflow as tf
-from scipy.special import binom
 from scipy.stats import rv_discrete
 
 
