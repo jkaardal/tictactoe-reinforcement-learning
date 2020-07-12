@@ -8,6 +8,7 @@ Three policy approximation techniques are provided:
 - REINFORCE,
 - REINFORCE with baseline,
 - and actor-critic.
+
 An approximate state-value function is used for the baseline in the latter two policies. Two types of value functions
 are provided:
 - tabular
