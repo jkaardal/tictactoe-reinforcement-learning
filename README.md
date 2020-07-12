@@ -13,6 +13,7 @@ An approximate state-value function is used for the baseline in the latter two p
 are provided:
 - tabular
 - and quadratic polynomial approximation.
+
 Both are updated using a Monte Carlo algorithm.
 
 For a guide to the parameters to train this model, see the help string to the `train.py` module:
