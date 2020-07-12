@@ -22,9 +22,9 @@ python -m tictactoe-reinforcement-learning.train -h
 ```
 which is the main entrypoint.
 
-For more thorough background information and summary of the theory, please check read 
+For more thorough background information and a summary of the theory, please read 
 [this link](http://joelkaardal.com/links/tutorials/tictactoe.html).
 
 For a playable demo of an entirely tabular implementation in javascript, see 
-[this link](http://joelkaardal.com/links/demos/xo-rl-js/xo.html) with source code may be found in
+[this link](http://joelkaardal.com/links/demos/xo-rl-js/xo.html) with source code found in
 [this repository](https://github.com/jkaardal/xo-rl-js).
